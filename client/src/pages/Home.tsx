@@ -40,8 +40,8 @@ export default function Home() {
     queryKey: ['/api/products'],
   });
 
-  const { data: categories = [] } = useQuery<Category[]>({
-    queryKey: ['/api/categories'],
+  const { data: categories = [] } = useQuery<(Category & { salesCount: number })[]>({
+    queryKey: ['/api/categories/by-sales'],
   });
 
   const { data: banners = [] } = useQuery<Banner[]>({

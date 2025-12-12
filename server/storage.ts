@@ -37,6 +37,7 @@ export interface IStorage {
   deleteAddress(id: string): Promise<boolean>;
 
   getCategories(): Promise<Category[]>;
+  getCategoriesBySales(): Promise<(Category & { salesCount: number })[]>;
   getCategory(id: string): Promise<Category | undefined>;
   createCategory(category: InsertCategory): Promise<Category>;
   updateCategory(id: string, category: Partial<InsertCategory>): Promise<Category | undefined>;
@@ -187,6 +188,42 @@ export class DatabaseStorage implements IStorage {
   async getCategories(): Promise<Category[]> {
     const result = await db.select().from(categories).where(eq(categories.isActive, true));
     return result.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  }
+
+  async getCategoriesBySales(): Promise<(Category & { salesCount: number })[]> {
+    const allCategories = await db.select().from(categories).where(eq(categories.isActive, true));
+    const deliveredOrders = await db.select().from(orders).where(eq(orders.status, 'delivered'));
+    const deliveredOrderIds = deliveredOrders.map(o => o.id);
+    
+    if (deliveredOrderIds.length === 0) {
+      return allCategories.map(c => ({ ...c, salesCount: 0 })).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    }
+    
+    const allOrderItems = await db.select().from(orderItems)
+      .where(inArray(orderItems.orderId, deliveredOrderIds));
+    
+    const productIds = Array.from(new Set(allOrderItems.map(item => item.productId)));
+    if (productIds.length === 0) {
+      return allCategories.map(c => ({ ...c, salesCount: 0 })).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    }
+    
+    const allProducts = await db.select().from(products)
+      .where(inArray(products.id, productIds));
+    
+    const productCategoryMap = new Map(allProducts.map(p => [p.id, p.categoryId]));
+    
+    const categorySalesMap = new Map<string, number>();
+    for (const item of allOrderItems) {
+      const categoryId = productCategoryMap.get(item.productId);
+      if (categoryId) {
+        const currentCount = categorySalesMap.get(categoryId) || 0;
+        categorySalesMap.set(categoryId, currentCount + item.quantity);
+      }
+    }
+    
+    return allCategories
+      .map(c => ({ ...c, salesCount: categorySalesMap.get(c.id) || 0 }))
+      .sort((a, b) => b.salesCount - a.salesCount);
   }
 
   async getCategory(id: string): Promise<Category | undefined> {

@@ -1,12 +1,13 @@
 import { useRef } from 'react';
-import { ChevronLeft, ChevronRight, Flame } from 'lucide-react';
+import { ChevronLeft, ChevronRight, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { motion } from 'framer-motion';
 import type { Category } from '@shared/schema';
 import { TRENDING_CATEGORY_ID } from '@/pages/Home';
 import { getCategoryIcon } from '@/lib/category-icons';
 
 interface CategoryCarouselProps {
-  categories: Category[];
+  categories: (Category & { salesCount?: number })[];
   selectedCategory: string | null;
   onSelectCategory: (categoryId: string | null) => void;
   showTrending?: boolean;
@@ -14,7 +15,7 @@ interface CategoryCarouselProps {
 
 export function CategoryCarousel({ categories, selectedCategory, onSelectCategory, showTrending = false }: CategoryCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const activeCategories = categories.filter(c => c.isActive).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  const activeCategories = categories.filter(c => c.isActive);
 
   const scroll = (direction: 'left' | 'right') => {
     if (!scrollRef.current) return;
@@ -124,14 +125,65 @@ export function CategoryCarousel({ categories, selectedCategory, onSelectCategor
             />
 
             {showTrending && (
-              <CategoryButton
-                isSelected={selectedCategory === TRENDING_CATEGORY_ID}
+              <motion.button
                 onClick={() => onSelectCategory(TRENDING_CATEGORY_ID)}
-                icon={Flame}
-                label="Em Alta"
-                variant="trending"
-                testId="button-category-trending"
-              />
+                className={`relative flex flex-col items-center gap-3 min-w-[120px] p-4 rounded-2xl transition-all duration-300 backdrop-blur-sm overflow-visible ${
+                  selectedCategory === TRENDING_CATEGORY_ID
+                    ? 'bg-gradient-to-b from-amber-500/40 to-yellow-600/30 border-2 border-amber-400'
+                    : 'bg-gradient-to-b from-amber-500/20 to-yellow-600/10 border-2 border-amber-500/40 hover:border-amber-400/70'
+                }`}
+                style={selectedCategory === TRENDING_CATEGORY_ID ? { boxShadow: '0 0 30px rgba(255, 191, 0, 0.5), 0 0 60px rgba(255, 191, 0, 0.2)' } : { boxShadow: '0 0 15px rgba(255, 191, 0, 0.2)' }}
+                data-testid="button-category-trending"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <motion.div 
+                  className="absolute -inset-0.5 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 rounded-2xl opacity-30 blur-sm"
+                  animate={{ 
+                    opacity: [0.2, 0.4, 0.2],
+                    scale: [1, 1.02, 1]
+                  }}
+                  transition={{ 
+                    duration: 2, 
+                    repeat: Infinity, 
+                    ease: "easeInOut" 
+                  }}
+                />
+                <motion.div 
+                  className={`relative w-14 h-14 rounded-xl flex items-center justify-center ${
+                    selectedCategory === TRENDING_CATEGORY_ID 
+                      ? 'bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-500' 
+                      : 'bg-gradient-to-br from-amber-500/30 to-yellow-500/20 border border-amber-400/50'
+                  }`}
+                  animate={{ 
+                    boxShadow: ['0 0 10px rgba(255, 191, 0, 0.3)', '0 0 20px rgba(255, 191, 0, 0.5)', '0 0 10px rgba(255, 191, 0, 0.3)']
+                  }}
+                  transition={{ 
+                    duration: 1.5, 
+                    repeat: Infinity, 
+                    ease: "easeInOut" 
+                  }}
+                >
+                  <TrendingUp className={`h-6 w-6 ${selectedCategory === TRENDING_CATEGORY_ID ? 'text-black' : 'text-amber-400'}`} />
+                </motion.div>
+                <span className={`relative text-sm font-bold text-center transition-colors duration-300 ${
+                  selectedCategory === TRENDING_CATEGORY_ID ? 'text-amber-300' : 'text-amber-400/90'
+                }`}>
+                  Em Alta
+                </span>
+                <motion.div 
+                  className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-br from-amber-300 to-yellow-500 rounded-full"
+                  animate={{ 
+                    scale: [1, 1.3, 1],
+                    opacity: [1, 0.7, 1]
+                  }}
+                  transition={{ 
+                    duration: 1, 
+                    repeat: Infinity, 
+                    ease: "easeInOut" 
+                  }}
+                />
+              </motion.button>
             )}
 
             {activeCategories.map((category) => {
