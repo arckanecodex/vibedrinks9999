@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, Sparkles, Clock, Truck, Gift } from 'lucide-react';
+import { ChevronDown, Sparkles, Clock, Truck, Gift, Wine } from 'lucide-react';
 import { motion } from 'framer-motion';
 import heroVideo from '@assets/ciroc_1765072919532.mp4';
 import logoImage from '@assets/vibedrinksfinal_1765554834904.gif';
 import { ComboModal } from './ComboModal';
+import { SpecialDrinksModal } from './SpecialDrinksModal';
 
 export function HeroSection() {
   const [comboModalOpen, setComboModalOpen] = useState(false);
+  const [specialDrinksOpen, setSpecialDrinksOpen] = useState(false);
   
   const scrollToProducts = () => {
     document.getElementById('products-section')?.scrollIntoView({ behavior: 'smooth' });
@@ -98,6 +100,19 @@ export function HeroSection() {
               </span>
               <div className="absolute inset-0 bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full" />
             </Button>
+            
+            <Button
+              size="lg"
+              className="relative bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 text-white font-bold text-lg rounded-full shadow-2xl shadow-purple-500/40 overflow-visible group animate-pulse"
+              onClick={() => setSpecialDrinksOpen(true)}
+              data-testid="button-special-drinks-cta"
+            >
+              <span className="relative z-10 flex items-center gap-2">
+                <Wine className="h-5 w-5" />
+                DRINKS ESPECIAIS
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-pink-500 via-purple-400 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full" />
+            </Button>
           </motion.div>
 
           <motion.div 
@@ -143,6 +158,7 @@ export function HeroSection() {
       <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
       
       <ComboModal open={comboModalOpen} onOpenChange={setComboModalOpen} />
+      <SpecialDrinksModal open={specialDrinksOpen} onOpenChange={setSpecialDrinksOpen} />
     </section>
   );
 }
