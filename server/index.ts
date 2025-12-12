@@ -3,7 +3,6 @@ import cors from "cors";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { seedDatabase } from "./storage";
 
 const app = express();
 const httpServer = createServer(app);
@@ -71,17 +70,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // ---------------------------
-  //  SeedDatabase seguro
-  // ---------------------------
-  try {
-    await seedDatabase();
-    console.log("Database seed completed successfully");
-  } catch (err) {
-    console.error("SeedDatabase falhou (servidor continuará):", err);
-  }
-
-  // Registrar rotas normalmente
+  // Registrar rotas normalmente - using Supabase data exclusively
   await registerRoutes(httpServer, app);
 
   // Middleware de erros (não derruba o processo em produção)
