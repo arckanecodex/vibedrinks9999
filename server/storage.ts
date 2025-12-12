@@ -252,12 +252,13 @@ export class DatabaseStorage implements IStorage {
       isActive: insertProduct.isActive ?? true,
       productType: insertProduct.productType ?? null,
       sortOrder: insertProduct.sortOrder ?? 0,
+      comboEligible: insertProduct.comboEligible ?? false,
     }).returning();
     return product;
   }
 
   async updateProduct(id: string, updates: Partial<InsertProduct>): Promise<Product | undefined> {
-    const allowedFields = ['categoryId', 'name', 'description', 'imageUrl', 'costPrice', 'profitMargin', 'salePrice', 'stock', 'isActive', 'productType', 'sortOrder'];
+    const allowedFields = ['categoryId', 'name', 'description', 'imageUrl', 'costPrice', 'profitMargin', 'salePrice', 'stock', 'isActive', 'productType', 'sortOrder', 'comboEligible'];
     const filteredUpdates = Object.fromEntries(
       Object.entries(updates).filter(([key, value]) => value !== undefined && allowedFields.includes(key))
     );

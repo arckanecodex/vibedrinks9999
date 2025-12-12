@@ -46,6 +46,7 @@ export const products = pgTable("products", {
   salePrice: decimal("sale_price", { precision: 10, scale: 2 }).notNull(),
   stock: integer("stock").notNull().default(0),
   isActive: boolean("is_active").default(true),
+  comboEligible: boolean("combo_eligible").default(false),
   productType: text("product_type"),
   sortOrder: integer("sort_order").default(0),
   createdAt: timestamp("created_at").defaultNow(),

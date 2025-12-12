@@ -2050,12 +2050,16 @@ function ProductItem({
   category,
   onEdit, 
   onDelete,
+  onToggleCombo,
+  isTogglingCombo,
   formatCurrency 
 }: { 
   product: Product; 
   category: Category | undefined;
   onEdit: (prod: Product) => void; 
   onDelete: (id: string) => void;
+  onToggleCombo: (id: string, comboEligible: boolean) => void;
+  isTogglingCombo: boolean;
   formatCurrency: (value: number | string) => string;
 }) {
   return (
@@ -2080,6 +2084,11 @@ function ProductItem({
               <Badge className={product.isActive ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}>
                 {product.isActive ? 'Ativo' : 'Inativo'}
               </Badge>
+              {product.comboEligible && (
+                <Badge className="bg-primary/20 text-primary">
+                  Combo
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -2105,11 +2114,19 @@ function ProductItem({
           </div>
         </div>
 
-        <div className="flex gap-2 mt-4">
+        <div className="flex items-center gap-2 mt-4">
+          <div className="flex items-center gap-2 flex-1">
+            <Switch
+              checked={product.comboEligible || false}
+              onCheckedChange={(checked) => onToggleCombo(product.id, checked)}
+              disabled={isTogglingCombo}
+              data-testid={`switch-combo-card-${product.id}`}
+            />
+            <span className="text-xs text-muted-foreground">Combo</span>
+          </div>
           <Button 
             size="sm" 
-            variant="outline" 
-            className="flex-1"
+            variant="outline"
             onClick={() => onEdit(product)}
             data-testid={`button-edit-product-${product.id}`}
           >
@@ -2255,6 +2272,16 @@ function ProdutosTab() {
       toast({ title: 'Produto atualizado!' });
       setEditingRowId(null);
       setEditRowData(null);
+    },
+  });
+
+  const toggleComboEligibleMutation = useMutation({
+    mutationFn: async ({ id, comboEligible }: { id: string; comboEligible: boolean }) => {
+      return apiRequest('PATCH', `/api/products/${id}`, { comboEligible });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      toast({ title: variables.comboEligible ? 'Produto adicionado ao combo!' : 'Produto removido do combo!' });
     },
   });
 
@@ -2702,6 +2729,8 @@ function ProdutosTab() {
                       category={category}
                       onEdit={handleOpenDialog}
                       onDelete={(id) => deleteMutation.mutate(id)}
+                      onToggleCombo={(id, comboEligible) => toggleComboEligibleMutation.mutate({ id, comboEligible })}
+                      isTogglingCombo={toggleComboEligibleMutation.isPending}
                       formatCurrency={formatCurrency}
                     />
                   );
@@ -2740,6 +2769,7 @@ function ProdutosTab() {
                               <TableHead className="w-24 text-right">Venda</TableHead>
                               <TableHead className="w-20 text-right">Estoque</TableHead>
                               <TableHead className="w-20 text-center">Status</TableHead>
+                              <TableHead className="w-20 text-center">Combo</TableHead>
                               <TableHead className="w-28 text-center">Acoes</TableHead>
                             </TableRow>
                           </TableHeader>
@@ -2842,6 +2872,14 @@ function ProdutosTab() {
                                     <Badge className={product.isActive ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}>
                                       {product.isActive ? 'Ativo' : 'Inativo'}
                                     </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    <Switch
+                                      checked={product.comboEligible || false}
+                                      onCheckedChange={(checked) => toggleComboEligibleMutation.mutate({ id: product.id, comboEligible: checked })}
+                                      disabled={toggleComboEligibleMutation.isPending}
+                                      data-testid={`switch-combo-${product.id}`}
+                                    />
                                   </TableCell>
                                   <TableCell>
                                     <div className="flex items-center justify-center gap-1">
