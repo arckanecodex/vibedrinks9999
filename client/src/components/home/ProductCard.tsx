@@ -33,7 +33,7 @@ export function ProductCard({ product }: ProductCardProps) {
       className="h-full"
     >
       <Card 
-        className="group h-full flex flex-col bg-gradient-to-b from-card/80 to-card overflow-hidden border border-primary/10 hover:border-primary/40 transition-all duration-500 hover:shadow-xl hover:shadow-primary/10"
+        className="group h-full flex flex-col bg-gradient-to-b from-card/80 to-card overflow-hidden border border-primary/10 hover:border-primary/40 transition-all duration-500 hover:shadow-xl hover:shadow-primary/10 card-lift"
         data-testid={`card-product-${product.id}`}
       >
         <div className="aspect-square relative overflow-hidden bg-gradient-to-br from-secondary/80 to-secondary">

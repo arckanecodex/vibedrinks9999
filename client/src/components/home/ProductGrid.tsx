@@ -113,17 +113,23 @@ export function ProductGrid({ products, isLoading, selectedCategory }: ProductGr
         {isLoading ? (
           <div className={`grid ${getGridClasses()} gap-6`}>
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="bg-card/50 rounded-xl overflow-hidden border border-primary/10">
-                <Skeleton className="aspect-square bg-secondary/50" />
+              <motion.div 
+                key={i} 
+                className="bg-card/50 rounded-xl overflow-hidden border border-primary/10"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+              >
+                <div className="aspect-square skeleton-premium" />
                 <div className="p-4 space-y-3">
-                  <Skeleton className="h-5 w-3/4 bg-secondary/50" />
-                  <Skeleton className="h-4 w-1/2 bg-secondary/50" />
+                  <div className="h-5 w-3/4 rounded skeleton-premium" />
+                  <div className="h-4 w-1/2 rounded skeleton-premium" />
                   <div className="flex justify-between gap-2">
-                    <Skeleton className="h-7 w-24 bg-secondary/50" />
-                    <Skeleton className="h-10 w-28 bg-secondary/50" />
+                    <div className="h-7 w-24 rounded skeleton-premium" />
+                    <div className="h-10 w-28 rounded skeleton-premium" />
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         ) : filteredProducts.length === 0 ? (
