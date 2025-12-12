@@ -44,7 +44,13 @@ import {
   Warehouse,
   AlertTriangle,
   TrendingUp,
-  BarChart3
+  BarChart3,
+  LayoutGrid,
+  Table2,
+  Save,
+  Camera,
+  Upload,
+  Image
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useRef} from 'react';
@@ -58,6 +64,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useOrderUpdates } from '@/hooks/use-order-updates';
@@ -2135,7 +2142,17 @@ function ProdutosTab() {
   const [isImporting, setIsImporting] = useState(false);
   const [sortBy, setSortBy] = useState<'name-asc' | 'name-desc' | 'price-asc' | 'price-desc'>('name-asc');
   const [gridCols, setGridCols] = useState<1 | 2 | 4>(2);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [editingRowId, setEditingRowId] = useState<string | null>(null);
+  const [editRowData, setEditRowData] = useState<{
+    costPrice: string;
+    salePrice: string;
+    profitMargin: string;
+    stock: number;
+    imageUrl: string | null;
+  } | null>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
+  const tableImageInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const handleOpenDialog = (product: Product | null) => {
@@ -2228,6 +2245,113 @@ function ProdutosTab() {
       toast({ title: 'Produto excluido!' });
     },
   });
+
+  const inlineUpdateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Product> }) => {
+      return apiRequest('PATCH', `/api/products/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      toast({ title: 'Produto atualizado!' });
+      setEditingRowId(null);
+      setEditRowData(null);
+    },
+  });
+
+  const startInlineEdit = (product: Product) => {
+    setEditingRowId(product.id);
+    setEditRowData({
+      costPrice: product.costPrice,
+      salePrice: product.salePrice,
+      profitMargin: product.profitMargin,
+      stock: product.stock,
+      imageUrl: product.imageUrl,
+    });
+  };
+
+  const cancelInlineEdit = () => {
+    setEditingRowId(null);
+    setEditRowData(null);
+  };
+
+  const saveInlineEdit = (productId: string) => {
+    if (!editRowData) return;
+    inlineUpdateMutation.mutate({
+      id: productId,
+      data: {
+        costPrice: String(parseFloat(editRowData.costPrice) || 0),
+        salePrice: String(parseFloat(editRowData.salePrice) || 0),
+        profitMargin: String(parseFloat(editRowData.profitMargin) || 0),
+        stock: Number(editRowData.stock) || 0,
+        imageUrl: editRowData.imageUrl,
+      },
+    });
+  };
+
+  const handleInlineCostChange = (value: string) => {
+    if (!editRowData) return;
+    const cost = parseFloat(value);
+    const margin = parseFloat(editRowData.profitMargin);
+    let newSalePrice = editRowData.salePrice;
+    if (!isNaN(cost) && !isNaN(margin) && cost > 0) {
+      newSalePrice = (cost * (1 + margin / 100)).toFixed(2);
+    }
+    setEditRowData({ ...editRowData, costPrice: value, salePrice: newSalePrice });
+  };
+
+  const handleInlineMarginChange = (value: string) => {
+    if (!editRowData) return;
+    const cost = parseFloat(editRowData.costPrice);
+    const margin = parseFloat(value);
+    let newSalePrice = editRowData.salePrice;
+    if (!isNaN(cost) && !isNaN(margin) && cost > 0) {
+      newSalePrice = (cost * (1 + margin / 100)).toFixed(2);
+    }
+    setEditRowData({ ...editRowData, profitMargin: value, salePrice: newSalePrice });
+  };
+
+  const handleInlineSaleChange = (value: string) => {
+    if (!editRowData) return;
+    const cost = parseFloat(editRowData.costPrice);
+    const sale = parseFloat(value);
+    let newMargin = editRowData.profitMargin;
+    if (!isNaN(cost) && !isNaN(sale) && cost > 0) {
+      newMargin = (((sale - cost) / cost) * 100).toFixed(2);
+    }
+    setEditRowData({ ...editRowData, salePrice: value, profitMargin: newMargin });
+  };
+
+  const handleTableImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editRowData || !editingRowId) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Erro', description: 'Selecione uma imagem valida', variant: 'destructive' });
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folder', 'products');
+
+    try {
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const result = await response.json();
+      if (response.ok && result.publicUrl) {
+        setEditRowData(prev => prev ? { ...prev, imageUrl: result.publicUrl } : null);
+        toast({ title: 'Imagem carregada!' });
+      }
+    } catch (error) {
+      toast({ title: 'Erro ao carregar imagem', variant: 'destructive' });
+    }
+
+    if (tableImageInputRef.current) {
+      tableImageInputRef.current.value = '';
+    }
+  };
 
   const handleCSVImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -2471,32 +2595,57 @@ function ProdutosTab() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center gap-1">
-          <span className="text-sm text-muted-foreground mr-2">Colunas:</span>
-          <Button
-            variant={gridCols === 1 ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setGridCols(1)}
-            data-testid="button-grid-1"
-          >
-            1
-          </Button>
-          <Button
-            variant={gridCols === 2 ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setGridCols(2)}
-            data-testid="button-grid-2"
-          >
-            2
-          </Button>
-          <Button
-            variant={gridCols === 4 ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setGridCols(4)}
-            data-testid="button-grid-4"
-          >
-            4
-          </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1">
+            <span className="text-sm text-muted-foreground mr-2">Visualizacao:</span>
+            <Button
+              variant={viewMode === 'cards' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('cards')}
+              data-testid="button-view-cards"
+            >
+              <LayoutGrid className="w-4 h-4 mr-1" />
+              Cards
+            </Button>
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('table')}
+              data-testid="button-view-table"
+            >
+              <Table2 className="w-4 h-4 mr-1" />
+              Tabela
+            </Button>
+          </div>
+          {viewMode === 'cards' && (
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-muted-foreground mr-2">Colunas:</span>
+              <Button
+                variant={gridCols === 1 ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setGridCols(1)}
+                data-testid="button-grid-1"
+              >
+                1
+              </Button>
+              <Button
+                variant={gridCols === 2 ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setGridCols(2)}
+                data-testid="button-grid-2"
+              >
+                2
+              </Button>
+              <Button
+                variant={gridCols === 4 ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setGridCols(4)}
+                data-testid="button-grid-4"
+              >
+                4
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -2530,26 +2679,225 @@ function ProdutosTab() {
             ? 'grid-cols-1 md:grid-cols-2' 
             : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4';
 
+        // Group products by category for table view
+        const productsByCategory = categories.map(cat => ({
+          category: cat,
+          products: sortedProducts.filter(p => p.categoryId === cat.id)
+        })).filter(group => group.products.length > 0);
+
         return (
           <>
             <p className="text-sm text-muted-foreground">
               {sortedProducts.length} {sortedProducts.length === 1 ? 'produto encontrado' : 'produtos encontrados'}
             </p>
-            <div className={`grid gap-4 ${gridClass}`}>
-              {sortedProducts.map(product => {
-                const category = categories.find(c => c.id === product.categoryId);
-                return (
-                  <ProductItem
-                    key={product.id}
-                    product={product}
-                    category={category}
-                    onEdit={handleOpenDialog}
-                    onDelete={(id) => deleteMutation.mutate(id)}
-                    formatCurrency={formatCurrency}
-                  />
-                );
-              })}
-            </div>
+            
+            {viewMode === 'cards' ? (
+              <div className={`grid gap-4 ${gridClass}`}>
+                {sortedProducts.map(product => {
+                  const category = categories.find(c => c.id === product.categoryId);
+                  return (
+                    <ProductItem
+                      key={product.id}
+                      product={product}
+                      category={category}
+                      onEdit={handleOpenDialog}
+                      onDelete={(id) => deleteMutation.mutate(id)}
+                      formatCurrency={formatCurrency}
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <input
+                  type="file"
+                  ref={tableImageInputRef}
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleTableImageUpload}
+                />
+                {productsByCategory.map(({ category, products: catProducts }) => (
+                  <Card key={category.id} data-testid={`table-category-${category.id}`}>
+                    <CardHeader className="py-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        {(() => {
+                          const IconComponent = getCategoryIcon(category.iconUrl);
+                          return <IconComponent className="w-5 h-5 text-primary" />;
+                        })()}
+                        {category.name}
+                        <Badge variant="secondary" className="ml-2">{catProducts.length}</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-16">Imagem</TableHead>
+                              <TableHead>Produto</TableHead>
+                              <TableHead className="w-24 text-right">Custo</TableHead>
+                              <TableHead className="w-24 text-right">Margem</TableHead>
+                              <TableHead className="w-24 text-right">Venda</TableHead>
+                              <TableHead className="w-20 text-right">Estoque</TableHead>
+                              <TableHead className="w-20 text-center">Status</TableHead>
+                              <TableHead className="w-28 text-center">Acoes</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {catProducts.map(product => {
+                              const isEditing = editingRowId === product.id;
+                              return (
+                                <TableRow key={product.id} data-testid={`table-row-product-${product.id}`}>
+                                  <TableCell>
+                                    {isEditing ? (
+                                      <div 
+                                        className="w-12 h-12 rounded-md bg-secondary flex items-center justify-center cursor-pointer hover:bg-secondary/80 transition-colors relative overflow-hidden"
+                                        onClick={() => tableImageInputRef.current?.click()}
+                                      >
+                                        {editRowData?.imageUrl ? (
+                                          <img src={editRowData.imageUrl} alt="" className="w-full h-full object-cover" />
+                                        ) : (
+                                          <Camera className="w-5 h-5 text-muted-foreground" />
+                                        )}
+                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                                          <Upload className="w-4 h-4 text-white" />
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="w-12 h-12 rounded-md bg-secondary flex items-center justify-center overflow-hidden">
+                                        {product.imageUrl ? (
+                                          <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                          <Image className="w-5 h-5 text-muted-foreground" />
+                                        )}
+                                      </div>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    <div>
+                                      <p className="font-medium">{product.name}</p>
+                                      {product.description && (
+                                        <p className="text-xs text-muted-foreground line-clamp-1">{product.description}</p>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {isEditing ? (
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        value={editRowData?.costPrice || ''}
+                                        onChange={(e) => handleInlineCostChange(e.target.value)}
+                                        className="w-20 h-8 text-right text-sm"
+                                        data-testid={`input-cost-${product.id}`}
+                                      />
+                                    ) : (
+                                      <span className="text-sm">{formatCurrency(product.costPrice)}</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {isEditing ? (
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        value={editRowData?.profitMargin || ''}
+                                        onChange={(e) => handleInlineMarginChange(e.target.value)}
+                                        className="w-20 h-8 text-right text-sm"
+                                        data-testid={`input-margin-${product.id}`}
+                                      />
+                                    ) : (
+                                      <span className="text-sm">{product.profitMargin}%</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {isEditing ? (
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        value={editRowData?.salePrice || ''}
+                                        onChange={(e) => handleInlineSaleChange(e.target.value)}
+                                        className="w-20 h-8 text-right text-sm"
+                                        data-testid={`input-sale-${product.id}`}
+                                      />
+                                    ) : (
+                                      <span className="text-sm font-bold text-primary">{formatCurrency(product.salePrice)}</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {isEditing ? (
+                                      <Input
+                                        type="number"
+                                        value={editRowData?.stock || 0}
+                                        onChange={(e) => setEditRowData(prev => prev ? { ...prev, stock: parseInt(e.target.value) || 0 } : null)}
+                                        className="w-16 h-8 text-right text-sm"
+                                        data-testid={`input-stock-${product.id}`}
+                                      />
+                                    ) : (
+                                      <span className={`text-sm font-medium ${product.stock <= 5 ? 'text-destructive' : product.stock <= 15 ? 'text-primary' : ''}`}>
+                                        {product.stock}
+                                      </span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    <Badge className={product.isActive ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}>
+                                      {product.isActive ? 'Ativo' : 'Inativo'}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center justify-center gap-1">
+                                      {isEditing ? (
+                                        <>
+                                          <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            onClick={() => saveInlineEdit(product.id)}
+                                            disabled={inlineUpdateMutation.isPending}
+                                            data-testid={`button-save-inline-${product.id}`}
+                                          >
+                                            <Check className="w-4 h-4 text-green-500" />
+                                          </Button>
+                                          <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            onClick={cancelInlineEdit}
+                                            data-testid={`button-cancel-inline-${product.id}`}
+                                          >
+                                            <X className="w-4 h-4 text-red-500" />
+                                          </Button>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            onClick={() => startInlineEdit(product)}
+                                            data-testid={`button-edit-inline-${product.id}`}
+                                          >
+                                            <Edit2 className="w-4 h-4" />
+                                          </Button>
+                                          <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            onClick={() => deleteMutation.mutate(product.id)}
+                                            data-testid={`button-delete-table-${product.id}`}
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                          </Button>
+                                        </>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </>
         );
       })()}
