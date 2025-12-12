@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronDown, Sparkles, Clock, Truck, Gift } from 'lucide-react';
 import { motion } from 'framer-motion';
 import heroVideo from '@assets/ciroc_1765072919532.mp4';
+import logoImage from '@assets/vibedrinksfinal_1765554834904.gif';
 import { ComboModal } from './ComboModal';
 
 export function HeroSection() {
@@ -47,24 +48,15 @@ export function HeroSection() {
             <span className="text-sm text-primary font-medium">Bebidas Premium</span>
           </motion.div>
 
-          <h1 
-            className="font-serif text-6xl md:text-8xl lg:text-9xl font-bold tracking-tight"
-            data-testid="text-hero-title"
-          >
-            <span className="bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-200 bg-clip-text text-transparent drop-shadow-2xl">
-              VIBE DRINKS
-            </span>
-          </h1>
-          
-          <motion.p 
-            className="font-serif text-2xl md:text-3xl text-white/90 tracking-wide"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4, duration: 0.6 }}
-            data-testid="text-hero-subtitle"
-          >
-            Adega & Drinkeria
-          </motion.p>
+          <motion.img 
+            src={logoImage}
+            alt="Vibe Drinks"
+            className="h-32 md:h-48 lg:h-64 w-auto drop-shadow-2xl"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6 }}
+            data-testid="img-hero-logo"
+          />
           
           <motion.p 
             className="text-lg md:text-xl text-white/60 max-w-2xl mx-auto"

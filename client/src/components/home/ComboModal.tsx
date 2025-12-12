@@ -33,15 +33,17 @@ export function ComboModal({ open, onOpenChange }: ComboModalProps) {
     queryKey: ['/api/categories'],
   });
 
-  const destiladosCategoryId = categories.find(c => 
-    c.name.toLowerCase().includes('destilado')
-  )?.id;
+  // Find categories that contain distilled spirits (gin, whisky, cachaça, vodka, sake, rum)
+  const destiladoKeywords = ['gin', 'whisky', 'whiskey', 'cachaça', 'cachaca', 'vodka', 'sake', 'saque', 'rum'];
+  const destiladosCategoryIds = categories
+    .filter(c => destiladoKeywords.some(keyword => c.name.toLowerCase().includes(keyword)))
+    .map(c => c.id);
 
   const destilados = products.filter(p => 
     p.comboEligible && 
     p.isActive && 
     p.stock > 0 && 
-    p.categoryId === destiladosCategoryId
+    destiladosCategoryIds.includes(p.categoryId)
   );
 
   const energeticos2L = products.filter(p => 
@@ -60,15 +62,30 @@ export function ComboModal({ open, onOpenChange }: ComboModalProps) {
     !p.name.toLowerCase().includes('2l')
   );
 
+  // Separate ice types: large kg bags (don't multiply) vs small flavored (multiply by 5)
   const gelos = products.filter(p => 
     p.comboEligible && 
     p.isActive && 
-    p.stock >= 5 && 
-    p.name.toLowerCase().includes('gelo')
+    p.name.toLowerCase().includes('gelo') &&
+    // For large ice bags (kg), only need 1 in stock; for small flavored need 5
+    (isLargeIceBag(p.name) ? p.stock >= 1 : p.stock >= 5)
   );
 
+  // Helper function to determine if ice is a large kg bag
+  function isLargeIceBag(name: string): boolean {
+    const lowerName = name.toLowerCase();
+    return lowerName.includes('kg') || lowerName.includes('saco') || lowerName.includes('grande');
+  }
+
   const energeticoQuantity = energeticoOption === '2L' ? 1 : 5;
-  const geloQuantity = 5;
+  
+  // Calculate ice quantity based on type
+  const getGeloQuantity = (gelo: Product | null): number => {
+    if (!gelo) return 5;
+    return isLargeIceBag(gelo.name) ? 1 : 5;
+  };
+  
+  const geloQuantity = getGeloQuantity(selectedGelo);
 
   const calculateTotal = () => {
     if (!selectedDestilado || !selectedEnergetico || !selectedGelo) return { original: 0, discounted: 0 };
@@ -234,25 +251,29 @@ export function ComboModal({ open, onOpenChange }: ComboModalProps) {
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <Snowflake className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold">3. Escolha seu Gelo (5 unidades)</h3>
+                <h3 className="font-semibold">3. Escolha seu Gelo</h3>
               </div>
               <RadioGroup
                 value={selectedGelo?.id || ''}
                 onValueChange={(value) => setSelectedGelo(gelos.find(p => p.id === value) || null)}
                 className="grid grid-cols-1 sm:grid-cols-2 gap-2"
               >
-                {gelos.map((product) => (
-                  <div key={product.id} className="flex items-center space-x-2">
-                    <RadioGroupItem value={product.id} id={`gelo-${product.id}`} />
-                    <Label 
-                      htmlFor={`gelo-${product.id}`} 
-                      className="flex-1 cursor-pointer text-sm"
-                      data-testid={`radio-gelo-${product.id}`}
-                    >
-                      {product.name} - R$ {Number(product.salePrice).toFixed(2)} x5
-                    </Label>
-                  </div>
-                ))}
+                {gelos.map((product) => {
+                  const isLarge = isLargeIceBag(product.name);
+                  const qty = isLarge ? 1 : 5;
+                  return (
+                    <div key={product.id} className="flex items-center space-x-2">
+                      <RadioGroupItem value={product.id} id={`gelo-${product.id}`} />
+                      <Label 
+                        htmlFor={`gelo-${product.id}`} 
+                        className="flex-1 cursor-pointer text-sm"
+                        data-testid={`radio-gelo-${product.id}`}
+                      >
+                        {product.name} - R$ {Number(product.salePrice).toFixed(2)} {qty > 1 && `x${qty}`}
+                      </Label>
+                    </div>
+                  );
+                })}
               </RadioGroup>
               {gelos.length === 0 && (
                 <p className="text-sm text-muted-foreground">Nenhum gelo disponivel no momento.</p>
