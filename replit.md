@@ -21,7 +21,7 @@ Preferred communication style: Simple, everyday language.
 
 **Design System:**
 - Primary colors: Black (#000000), Gold (#FFD700), Yellow (#FFC400), White (#FFFFFF)
-- Typography: Playfair Display (serif headings), Inter (body text)
+- Typography: Anton (brand font, Google Fonts), Playfair Display (serif headings), Inter (body text)
 - Premium aesthetic with gold glow effects and luxury branding
 - Responsive layouts optimized for mobile-first approach
 
@@ -37,6 +37,8 @@ Preferred communication style: Simple, everyday language.
 - Stock validation prevents selection of out-of-stock items
 - Cart tracks combo items separately and calculates discount automatically
 - Checkout displays combo discount and applies it to the total
+- Products have a comboEligible field that admin can toggle via dashboard (both card and table views)
+- Toggle switch in admin dashboard allows marking products as combo-eligible with real-time persistence
 
 **Key Pages:**
 - Home: Hero video section, banner carousel, category carousel, product grid
