@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useCart } from '@/lib/cart';
 import { useToast } from '@/hooks/use-toast';
 import { Package, Zap, Snowflake, Percent, ShoppingCart, Loader2 } from 'lucide-react';
-import type { Product } from '@shared/schema';
+import type { Product, Category } from '@shared/schema';
 
 interface ComboModalProps {
   open: boolean;
@@ -29,10 +29,43 @@ export function ComboModal({ open, onOpenChange }: ComboModalProps) {
     queryKey: ['/api/products'],
   });
 
-  const destilados = products.filter(p => p.productType === 'destilado' && p.isActive && p.stock > 0);
-  const energeticos2L = products.filter(p => p.productType === 'energetico' && p.isActive && p.stock > 0 && p.name.toLowerCase().includes('2l'));
-  const energeticosCans = products.filter(p => p.productType === 'energetico' && p.isActive && p.stock >= 5 && !p.name.toLowerCase().includes('2l'));
-  const gelos = products.filter(p => p.productType === 'gelo' && p.isActive && p.stock >= 5);
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ['/api/categories'],
+  });
+
+  const destiladosCategoryId = categories.find(c => 
+    c.name.toLowerCase().includes('destilado')
+  )?.id;
+
+  const destilados = products.filter(p => 
+    p.comboEligible && 
+    p.isActive && 
+    p.stock > 0 && 
+    p.categoryId === destiladosCategoryId
+  );
+
+  const energeticos2L = products.filter(p => 
+    p.comboEligible && 
+    p.isActive && 
+    p.stock > 0 && 
+    p.name.toLowerCase().includes('energetico') && 
+    p.name.toLowerCase().includes('2l')
+  );
+
+  const energeticosCans = products.filter(p => 
+    p.comboEligible && 
+    p.isActive && 
+    p.stock >= 5 && 
+    p.name.toLowerCase().includes('energetico') && 
+    !p.name.toLowerCase().includes('2l')
+  );
+
+  const gelos = products.filter(p => 
+    p.comboEligible && 
+    p.isActive && 
+    p.stock >= 5 && 
+    p.name.toLowerCase().includes('gelo')
+  );
 
   const energeticoQuantity = energeticoOption === '2L' ? 1 : 5;
   const geloQuantity = 5;
