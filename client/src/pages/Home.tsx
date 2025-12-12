@@ -12,7 +12,7 @@ import { ProductGrid } from '@/components/home/ProductGrid';
 import { CartSheet } from '@/components/cart/CartSheet';
 import { FloatingCartButton } from '@/components/cart/FloatingCartButton';
 import { Button } from '@/components/ui/button';
-import logoImage from '@assets/VIBE_DRINKS_1765072715257.png';
+import logoImage from '@assets/vibedrinksfinal_1765554834904.gif';
 import type { Product, Category, Banner } from '@shared/schema';
 
 export const TRENDING_CATEGORY_ID = '__trending__';

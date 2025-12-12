@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/lib/auth';
 import { apiRequest } from '@/lib/queryClient';
-import logoImage from '@assets/VIBE_DRINKS_1765072715257.png';
+import logoImage from '@assets/vibedrinksfinal_1765554834904.gif';
 import { NEIGHBORHOODS, DELIVERY_ZONES, DELIVERY_FEE_WARNING, type DeliveryZone as DeliveryZoneType } from '@shared/delivery-zones';
 
 type Step = 'phone' | 'password' | 'register';
