@@ -27,9 +27,16 @@ Preferred communication style: Simple, everyday language.
 
 **State Management:**
 - AuthContext for user authentication and session persistence
-- CartContext for shopping cart (simple product sales without combo discounts)
+- CartContext for shopping cart with combo support (items, combos, subtotal, comboDiscount, total)
 - React Query for server state caching and synchronization
 - LocalStorage for client-side persistence
+
+**Combo Feature:**
+- ComboModal allows customers to build a combo with 15% discount
+- Combo consists of: 1 destilado + energetico (1x 2L or 5 cans) + 5 gelos
+- Stock validation prevents selection of out-of-stock items
+- Cart tracks combo items separately and calculates discount automatically
+- Checkout displays combo discount and applies it to the total
 
 **Key Pages:**
 - Home: Hero video section, banner carousel, category carousel, product grid
