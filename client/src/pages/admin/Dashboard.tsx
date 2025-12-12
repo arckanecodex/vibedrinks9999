@@ -4595,6 +4595,10 @@ function ConfiguracoesTab() {
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('pedidos');
+  const [financeiroUnlocked, setFinanceiroUnlocked] = useState(false);
+  const [showFinanceiroDialog, setShowFinanceiroDialog] = useState(false);
+  const [financeiroPassword, setFinanceiroPassword] = useState('');
+  const [financeiroError, setFinanceiroError] = useState('');
   const { user, role, logout } = useAuth();
   const [, setLocation] = useLocation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -4635,6 +4639,37 @@ export default function AdminDashboard() {
         left: direction === 'left' ? -scrollAmount : scrollAmount,
         behavior: 'smooth'
       });
+    }
+  };
+
+  const handleTabClick = (tabId: string) => {
+    if (tabId === 'financeiro' && !financeiroUnlocked) {
+      setShowFinanceiroDialog(true);
+      setFinanceiroPassword('');
+      setFinanceiroError('');
+    } else {
+      setActiveTab(tabId);
+    }
+  };
+
+  const handleFinanceiroPasswordSubmit = async () => {
+    try {
+      const res = await fetch('/api/auth/financeiro', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: financeiroPassword }),
+      });
+      if (res.ok) {
+        setFinanceiroUnlocked(true);
+        setShowFinanceiroDialog(false);
+        setActiveTab('financeiro');
+        setFinanceiroPassword('');
+        setFinanceiroError('');
+      } else {
+        setFinanceiroError('Senha incorreta');
+      }
+    } catch {
+      setFinanceiroError('Erro ao verificar senha');
     }
   };
 
@@ -4710,7 +4745,7 @@ export default function AdminDashboard() {
               return (
                 <Button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => handleTabClick(tab.id)}
                   variant={isActive ? "default" : "outline"}
                   className={`flex items-center gap-2 px-4 py-2 whitespace-nowrap flex-shrink-0 min-w-fit ${
                     isActive 
@@ -4741,6 +4776,57 @@ export default function AdminDashboard() {
       <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-auto">
         {renderTab()}
       </main>
+
+      <Dialog open={showFinanceiroDialog} onOpenChange={setShowFinanceiroDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Key className="w-5 h-5 text-primary" />
+              Acesso ao Financeiro
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-muted-foreground text-sm">
+              Digite a senha para acessar o painel financeiro.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="financeiro-password">Senha</Label>
+              <Input
+                id="financeiro-password"
+                type="password"
+                value={financeiroPassword}
+                onChange={(e) => setFinanceiroPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleFinanceiroPasswordSubmit();
+                  }
+                }}
+                placeholder="Digite a senha"
+                className="bg-secondary"
+                data-testid="input-financeiro-password"
+              />
+              {financeiroError && (
+                <p className="text-destructive text-sm">{financeiroError}</p>
+              )}
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowFinanceiroDialog(false)}
+                data-testid="button-cancel-financeiro"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleFinanceiroPasswordSubmit}
+                data-testid="button-confirm-financeiro"
+              >
+                Acessar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -339,6 +339,18 @@ export async function registerRoutes(
     res.json({ user: safeUser, address });
   });
 
+  // Financeiro password validation
+  const FINANCEIRO_PASSWORD = "0014";
+  
+  app.post("/api/auth/financeiro", async (req, res) => {
+    const { password } = req.body;
+    if (password === FINANCEIRO_PASSWORD) {
+      res.json({ success: true });
+    } else {
+      res.status(401).json({ error: "Senha incorreta" });
+    }
+  });
+
   app.get("/api/addresses/:userId", async (req, res) => {
     const addresses = await storage.getAddresses(req.params.userId);
     res.json(addresses);
