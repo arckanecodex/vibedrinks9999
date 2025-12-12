@@ -46,11 +46,19 @@ export function ComboModal({ open, onOpenChange }: ComboModalProps) {
     destiladosCategoryIds.includes(p.categoryId)
   );
 
+  // Keywords for energy drinks (including brand names)
+  const energeticoKeywords = ['energetico', 'energético', 'redbull', 'red bull', 'monster', 'tnt', 'burn', 'fusion', 'energy'];
+  
+  const isEnergetico = (name: string): boolean => {
+    const lowerName = name.toLowerCase();
+    return energeticoKeywords.some(keyword => lowerName.includes(keyword));
+  };
+
   const energeticos2L = products.filter(p => 
     p.comboEligible && 
     p.isActive && 
     p.stock > 0 && 
-    p.name.toLowerCase().includes('energetico') && 
+    isEnergetico(p.name) && 
     p.name.toLowerCase().includes('2l')
   );
 
@@ -58,7 +66,7 @@ export function ComboModal({ open, onOpenChange }: ComboModalProps) {
     p.comboEligible && 
     p.isActive && 
     p.stock >= 5 && 
-    p.name.toLowerCase().includes('energetico') && 
+    isEnergetico(p.name) && 
     !p.name.toLowerCase().includes('2l')
   );
 
@@ -95,7 +103,7 @@ export function ComboModal({ open, onOpenChange }: ComboModalProps) {
     const geloPrice = Number(selectedGelo.salePrice) * geloQuantity;
     
     const original = destiladoPrice + energeticoPrice + geloPrice;
-    const discounted = original * 0.85;
+    const discounted = original * 0.95;
     
     return { original, discounted };
   };
@@ -121,14 +129,14 @@ export function ComboModal({ open, onOpenChange }: ComboModalProps) {
       energeticoQuantity,
       gelo: selectedGelo,
       geloQuantity,
-      discountPercent: 15,
+      discountPercent: 5,
       originalTotal: totals.original,
       discountedTotal: totals.discounted,
     });
 
     toast({
       title: 'Combo adicionado!',
-      description: `Combo com 15% de desconto foi adicionado ao carrinho.`,
+      description: `Combo com 5% de desconto foi adicionado ao carrinho.`,
     });
 
     setSelectedDestilado(null);
@@ -153,7 +161,7 @@ export function ComboModal({ open, onOpenChange }: ComboModalProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
             <Percent className="h-6 w-6 text-primary" />
-            Monte Seu Combo - 15% OFF
+            Monte Seu Combo - 5% OFF
           </DialogTitle>
         </DialogHeader>
 
@@ -286,7 +294,7 @@ export function ComboModal({ open, onOpenChange }: ComboModalProps) {
                 <span className="line-through">R$ {totals.original.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
-                <span>Desconto (15%):</span>
+                <span>Desconto (5%):</span>
                 <span>- R$ {(totals.original - totals.discounted).toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-lg font-bold">

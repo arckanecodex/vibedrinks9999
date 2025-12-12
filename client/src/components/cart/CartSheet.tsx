@@ -95,7 +95,7 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <Gift className="h-5 w-5 text-primary" />
-                        <span className="font-semibold text-primary">Combo 15% OFF</span>
+                        <span className="font-semibold text-primary">Combo 5% OFF</span>
                       </div>
                       <Button
                         variant="ghost"

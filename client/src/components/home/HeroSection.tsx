@@ -51,7 +51,7 @@ export function HeroSection() {
           <motion.img 
             src={logoImage}
             alt="Vibe Drinks"
-            className="h-32 md:h-48 lg:h-64 w-auto drop-shadow-2xl"
+            className="h-48 md:h-72 lg:h-96 w-auto drop-shadow-2xl mx-auto"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6 }}
@@ -94,7 +94,7 @@ export function HeroSection() {
             >
               <span className="relative z-10 flex items-center gap-2">
                 <Gift className="h-5 w-5" />
-                MONTE SEU COMBO 15% OFF
+                MONTE SEU COMBO 5% OFF
               </span>
               <div className="absolute inset-0 bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full" />
             </Button>

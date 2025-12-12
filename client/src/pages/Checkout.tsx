@@ -351,7 +351,7 @@ export default function Checkout() {
                     <div className="flex justify-between text-sm">
                       <span className="text-green-500 flex items-center gap-1">
                         <Gift className="h-3 w-3" />
-                        Desconto Combo (15%)
+                        Desconto Combo (5%)
                       </span>
                       <span className="text-green-500" data-testid="text-combo-discount">
                         - {formatPrice(comboDiscount)}
