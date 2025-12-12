@@ -91,8 +91,17 @@ Preferred communication style: Simple, everyday language.
 - Delivery zones: Fixed delivery fees per neighborhood zone (no per-km calculation)
 - CEP auto-fill: ViaCEP API integration for automatic address completion
 - Order status workflow management with role-based state transitions
-- Stock management with deduction on order placement
+- Stock management with deduction on order placement and restoration on cancellation
 - Real-time updates via SSE (Server-Sent Events) - no refresh buttons needed
+
+**PDV (Point of Sale):**
+- Mobile-first responsive design optimized for counter employees using smartphones
+- Category carousel with navigation arrows for quick product filtering
+- Floating cart button on mobile that opens a slide-out panel (Sheet component)
+- Manual discount field for applying per-sale discounts
+- Stock is automatically deducted when a sale is made
+- Stock is automatically restored when an order is cancelled
+- Products cache is invalidated after order creation to show updated stock
 
 ### Data Storage Solutions
 
