@@ -1,9 +1,13 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, Sparkles, Clock, Truck } from 'lucide-react';
+import { ChevronDown, Sparkles, Clock, Truck, Gift } from 'lucide-react';
 import { motion } from 'framer-motion';
 import heroVideo from '@assets/ciroc_1765072919532.mp4';
+import { ComboModal } from './ComboModal';
 
 export function HeroSection() {
+  const [comboModalOpen, setComboModalOpen] = useState(false);
+  
   const scrollToProducts = () => {
     document.getElementById('products-section')?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -89,6 +93,19 @@ export function HeroSection() {
               </span>
               <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </Button>
+            
+            <Button
+              size="lg"
+              className="relative bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-400 text-black font-bold text-lg rounded-full shadow-2xl shadow-yellow-400/40 overflow-visible group animate-pulse"
+              onClick={() => setComboModalOpen(true)}
+              data-testid="button-combo-cta"
+            >
+              <span className="relative z-10 flex items-center gap-2">
+                <Gift className="h-5 w-5" />
+                MONTE SEU COMBO 15% OFF
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full" />
+            </Button>
           </motion.div>
 
           <motion.div 
@@ -132,6 +149,8 @@ export function HeroSection() {
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
+      
+      <ComboModal open={comboModalOpen} onOpenChange={setComboModalOpen} />
     </section>
   );
 }

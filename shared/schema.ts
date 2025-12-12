@@ -201,6 +201,20 @@ export type CartItem = {
   productId: string;
   product: Product;
   quantity: number;
+  isComboItem?: boolean;
+  comboId?: string;
+};
+
+export type ComboData = {
+  id: string;
+  destilado: Product;
+  energetico: Product;
+  energeticoQuantity: number;
+  gelo: Product;
+  geloQuantity: number;
+  discountPercent: number;
+  originalTotal: number;
+  discountedTotal: number;
 };
 
 export type OrderStatus = "pending" | "accepted" | "preparing" | "ready" | "dispatched" | "arrived" | "delivered" | "cancelled";

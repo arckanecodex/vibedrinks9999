@@ -1,13 +1,18 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import type { Product, CartItem } from '@shared/schema';
+import type { Product, CartItem, ComboData } from '@shared/schema';
 
 interface CartContextType {
   items: CartItem[];
+  combos: ComboData[];
   addItem: (product: Product, quantity?: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
+  addCombo: (combo: ComboData) => void;
+  removeCombo: (comboId: string) => void;
   clearCart: () => void;
   subtotal: number;
+  comboDiscount: number;
+  total: number;
   itemCount: number;
 }
 
@@ -28,16 +33,34 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return [];
   });
 
+  const [combos, setCombos] = useState<ComboData[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('vibe-drinks-combos');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          return [];
+        }
+      }
+    }
+    return [];
+  });
+
   useEffect(() => {
     localStorage.setItem('vibe-drinks-cart', JSON.stringify(items));
   }, [items]);
 
+  useEffect(() => {
+    localStorage.setItem('vibe-drinks-combos', JSON.stringify(combos));
+  }, [combos]);
+
   const addItem = (product: Product, quantity = 1) => {
     setItems(prev => {
-      const existing = prev.find(item => item.productId === product.id);
+      const existing = prev.find(item => item.productId === product.id && !item.isComboItem);
       if (existing) {
         return prev.map(item =>
-          item.productId === product.id
+          item.productId === product.id && !item.isComboItem
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
@@ -47,7 +70,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const removeItem = (productId: string) => {
-    setItems(prev => prev.filter(item => item.productId !== productId));
+    setItems(prev => prev.filter(item => item.productId !== productId || item.isComboItem));
   };
 
   const updateQuantity = (productId: string, quantity: number) => {
@@ -57,13 +80,29 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
     setItems(prev =>
       prev.map(item =>
-        item.productId === productId ? { ...item, quantity } : item
+        item.productId === productId && !item.isComboItem ? { ...item, quantity } : item
       )
     );
   };
 
+  const addCombo = (combo: ComboData) => {
+    setCombos(prev => [...prev, combo]);
+    setItems(prev => [
+      ...prev,
+      { productId: combo.destilado.id, product: combo.destilado, quantity: 1, isComboItem: true, comboId: combo.id },
+      { productId: combo.energetico.id, product: combo.energetico, quantity: combo.energeticoQuantity, isComboItem: true, comboId: combo.id },
+      { productId: combo.gelo.id, product: combo.gelo, quantity: combo.geloQuantity, isComboItem: true, comboId: combo.id },
+    ]);
+  };
+
+  const removeCombo = (comboId: string) => {
+    setCombos(prev => prev.filter(c => c.id !== comboId));
+    setItems(prev => prev.filter(item => item.comboId !== comboId));
+  };
+
   const clearCart = () => {
     setItems([]);
+    setCombos([]);
   };
 
   const subtotal = items.reduce(
@@ -71,17 +110,29 @@ export function CartProvider({ children }: { children: ReactNode }) {
     0
   );
 
+  const comboDiscount = combos.reduce(
+    (sum, combo) => sum + (combo.originalTotal - combo.discountedTotal),
+    0
+  );
+
+  const total = subtotal - comboDiscount;
+
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <CartContext.Provider
       value={{
         items,
+        combos,
         addItem,
         removeItem,
         updateQuantity,
+        addCombo,
+        removeCombo,
         clearCart,
         subtotal,
+        comboDiscount,
+        total,
         itemCount,
       }}
     >

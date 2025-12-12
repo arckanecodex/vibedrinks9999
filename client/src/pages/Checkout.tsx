@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { MapPin, CreditCard, Banknote, QrCode, Truck, ArrowLeft, Loader2, Copy, Check } from 'lucide-react';
+import { MapPin, CreditCard, Banknote, QrCode, Truck, ArrowLeft, Loader2, Copy, Check, Gift } from 'lucide-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +21,7 @@ import { calculateDeliveryFee, getGroupedNeighborhoods } from '@/lib/delivery-fe
 export default function Checkout() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { items, subtotal, clearCart } = useCart();
+  const { items, combos, subtotal, comboDiscount, total: cartTotal, clearCart } = useCart();
   const { user, address, isAuthenticated } = useAuth();
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix');
@@ -55,7 +55,7 @@ export default function Checkout() {
     fee: deliveryFeeResult.fee
   } : null;
   
-  const total = subtotal + deliveryFee;
+  const total = cartTotal + deliveryFee;
 
   const createOrderMutation = useMutation({
     mutationFn: async () => {
@@ -72,7 +72,7 @@ export default function Checkout() {
         subtotal,
         deliveryFee,
         deliveryDistance: 0,
-        discount: 0,
+        discount: comboDiscount,
         total,
         paymentMethod,
         changeFor: paymentMethod === 'cash' && needsChange ? Number(changeFor) : null,
@@ -346,6 +346,18 @@ export default function Checkout() {
                     <span className="text-muted-foreground">Subtotal</span>
                     <span className="text-foreground">{formatPrice(subtotal)}</span>
                   </div>
+
+                  {comboDiscount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-green-500 flex items-center gap-1">
+                        <Gift className="h-3 w-3" />
+                        Desconto Combo (15%)
+                      </span>
+                      <span className="text-green-500" data-testid="text-combo-discount">
+                        - {formatPrice(comboDiscount)}
+                      </span>
+                    </div>
+                  )}
 
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground flex items-center gap-1">

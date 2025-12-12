@@ -1,7 +1,8 @@
-import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, ShoppingBag } from 'lucide-react';
+import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, ShoppingBag, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/lib/cart';
 import { useAuth } from '@/lib/auth';
 import { useLocation } from 'wouter';
@@ -13,7 +14,7 @@ interface CartSheetProps {
 }
 
 export function CartSheet({ open, onOpenChange }: CartSheetProps) {
-  const { items, subtotal, updateQuantity, removeItem, clearCart, itemCount } = useCart();
+  const { items, combos, subtotal, comboDiscount, total, updateQuantity, removeItem, removeCombo, clearCart, itemCount } = useCart();
   const { isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
 
@@ -24,7 +25,6 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
     }).format(price);
   };
 
-
   const handleCheckout = () => {
     onOpenChange(false);
     if (isAuthenticated) {
@@ -33,6 +33,9 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
       setLocation('/login?redirect=/checkout');
     }
   };
+
+  const regularItems = items.filter(item => !item.isComboItem);
+  const comboItems = items.filter(item => item.isComboItem);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -80,8 +83,59 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
           <>
             <ScrollArea className="flex-1">
               <div className="p-4 space-y-3">
+                {combos.map((combo) => (
+                  <motion.div
+                    key={combo.id}
+                    layout
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="p-4 bg-gradient-to-r from-amber-500/10 to-yellow-500/10 rounded-xl border border-primary/30"
+                    data-testid={`cart-combo-${combo.id}`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <Gift className="h-5 w-5 text-primary" />
+                        <span className="font-semibold text-primary">Combo 15% OFF</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeCombo(combo.id)}
+                        data-testid={`button-remove-combo-${combo.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between text-white/80">
+                        <span>1x {combo.destilado.name}</span>
+                        <span>{formatPrice(Number(combo.destilado.salePrice))}</span>
+                      </div>
+                      <div className="flex justify-between text-white/80">
+                        <span>{combo.energeticoQuantity}x {combo.energetico.name}</span>
+                        <span>{formatPrice(Number(combo.energetico.salePrice) * combo.energeticoQuantity)}</span>
+                      </div>
+                      <div className="flex justify-between text-white/80">
+                        <span>{combo.geloQuantity}x {combo.gelo.name}</span>
+                        <span>{formatPrice(Number(combo.gelo.salePrice) * combo.geloQuantity)}</span>
+                      </div>
+                      <div className="border-t border-primary/20 pt-2 mt-2">
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>Subtotal:</span>
+                          <span className="line-through">{formatPrice(combo.originalTotal)}</span>
+                        </div>
+                        <div className="flex justify-between text-green-500 font-semibold">
+                          <span>Com desconto:</span>
+                          <span>{formatPrice(combo.discountedTotal)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+
                 <AnimatePresence>
-                  {items.map((item) => (
+                  {regularItems.map((item) => (
                     <motion.div
                       key={item.productId}
                       layout
@@ -161,11 +215,26 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
             </ScrollArea>
 
             <div className="border-t border-primary/10 bg-gradient-to-t from-black to-transparent p-6 space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span className="font-bold text-2xl bg-gradient-to-r from-amber-400 to-yellow-500 bg-clip-text text-transparent">
-                  {formatPrice(subtotal)}
-                </span>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span className="text-white">{formatPrice(subtotal)}</span>
+                </div>
+                {comboDiscount > 0 && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-green-500 flex items-center gap-1">
+                      <Gift className="h-4 w-4" />
+                      Desconto Combo
+                    </span>
+                    <span className="text-green-500">- {formatPrice(comboDiscount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center pt-2 border-t border-primary/10">
+                  <span className="text-muted-foreground">Total</span>
+                  <span className="font-bold text-2xl bg-gradient-to-r from-amber-400 to-yellow-500 bg-clip-text text-transparent">
+                    {formatPrice(total)}
+                  </span>
+                </div>
               </div>
               
               <p className="text-xs text-muted-foreground">
