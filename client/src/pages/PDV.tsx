@@ -15,19 +15,22 @@ import {
   User,
   Package,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  X,
+  Percent
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import type { Product, Category } from '@shared/schema';
-import { PAYMENT_METHOD_LABELS, type PaymentMethod } from '@shared/schema';
+import { type PaymentMethod } from '@shared/schema';
 
 interface CartItem {
   product: Product;
@@ -46,6 +49,7 @@ export default function PDV() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { user, role, logout } = useAuth();
+  const categoryScrollRef = useRef<HTMLDivElement>(null);
   
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -55,6 +59,7 @@ export default function PDV() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [changeFor, setChangeFor] = useState('');
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const [manualDiscount, setManualDiscount] = useState('');
 
   const { data: products = [] } = useQuery<Product[]>({
@@ -71,6 +76,7 @@ export default function PDV() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
       toast({ title: 'Pedido criado com sucesso!' });
       setCart([]);
       setCustomerName('');
@@ -79,6 +85,7 @@ export default function PDV() {
       setChangeFor('');
       setManualDiscount('');
       setIsPaymentDialogOpen(false);
+      setIsCartOpen(false);
     },
     onError: () => {
       toast({ title: 'Erro ao criar pedido', variant: 'destructive' });
@@ -134,6 +141,7 @@ export default function PDV() {
   const subtotal = cart.reduce((sum, item) => sum + Number(item.product.salePrice) * item.quantity, 0);
   const discountValue = parseFloat(manualDiscount) || 0;
   const total = Math.max(0, subtotal - discountValue);
+  const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleFinalizeSale = () => {
     if (cart.length === 0) {
@@ -182,249 +190,311 @@ export default function PDV() {
 
   const change = paymentMethod === 'cash' && changeFor ? parseFloat(changeFor) - total : 0;
 
-  return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <header className="bg-black border-b border-primary/20 py-4 px-6 flex items-center justify-between sticky top-0 z-50">
-        <div className="flex items-center gap-3">
-          <ShoppingCart className="h-8 w-8 text-primary" />
-          <h1 className="font-serif text-2xl text-primary">PDV - Balcao</h1>
+  const scrollCategories = (direction: 'left' | 'right') => {
+    if (categoryScrollRef.current) {
+      const scrollAmount = 200;
+      categoryScrollRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  const CartContent = () => (
+    <div className="flex flex-col h-full">
+      <div className="p-3 border-b border-border">
+        <div className="flex items-center gap-2">
+          <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <Input
+            placeholder="Nome do cliente"
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+            className="bg-secondary border-primary/30 text-sm"
+            data-testid="input-customer-name"
+          />
         </div>
-        <div className="flex items-center gap-4">
-          <span className="text-muted-foreground text-sm">
-            Operador: {user?.name}
+      </div>
+
+      <div className="flex-1 overflow-auto p-3">
+        {cart.length === 0 ? (
+          <div className="h-full flex items-center justify-center text-muted-foreground text-center">
+            <div>
+              <Package className="h-10 w-10 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">Carrinho vazio</p>
+              <p className="text-xs">Toque em um produto</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {cart.map((item) => (
+              <div key={item.product.id} className="bg-secondary rounded-lg p-2" data-testid={`cart-item-${item.product.id}`}>
+                <div className="flex justify-between items-start mb-1">
+                  <span className="font-medium text-xs flex-1 line-clamp-1">{item.product.name}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5"
+                    onClick={() => removeFromCart(item.product.id)}
+                    data-testid={`button-remove-${item.product.id}`}
+                  >
+                    <Trash2 className="h-3 w-3 text-destructive" />
+                  </Button>
+                </div>
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => updateQuantity(item.product.id, -1)}
+                      data-testid={`button-decrease-${item.product.id}`}
+                    >
+                      <Minus className="h-3 w-3" />
+                    </Button>
+                    <span className="font-medium w-6 text-center text-sm">{item.quantity}</span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => updateQuantity(item.product.id, 1)}
+                      data-testid={`button-increase-${item.product.id}`}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <span className="font-bold text-primary text-sm">
+                    {formatCurrency(Number(item.product.salePrice) * item.quantity)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="p-3 border-t border-border space-y-2">
+        <Input
+          placeholder="Observacoes..."
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className="bg-secondary border-primary/30 text-sm"
+          data-testid="input-notes"
+        />
+
+        <div className="flex justify-between text-sm">
+          <span>Subtotal:</span>
+          <span className="font-bold">{formatCurrency(subtotal)}</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Percent className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <Input
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="Desconto R$"
+            value={manualDiscount}
+            onChange={(e) => setManualDiscount(e.target.value)}
+            className="bg-secondary border-primary/30 text-sm flex-1"
+            data-testid="input-discount"
+          />
+        </div>
+
+        {discountValue > 0 && (
+          <div className="flex justify-between text-green-400 text-sm">
+            <span>Desconto:</span>
+            <span>-{formatCurrency(discountValue)}</span>
+          </div>
+        )}
+
+        <div className="flex justify-between text-lg font-bold text-primary">
+          <span>Total:</span>
+          <span>{formatCurrency(total)}</span>
+        </div>
+
+        <Button
+          className="w-full py-4"
+          disabled={cart.length === 0}
+          onClick={handleFinalizeSale}
+          data-testid="button-finalize-sale"
+        >
+          <Check className="h-4 w-4 mr-2" />
+          Finalizar Venda
+        </Button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
+      <header className="bg-black border-b border-primary/20 py-2 px-3 flex items-center justify-between sticky top-0 z-50">
+        <div className="flex items-center gap-2">
+          <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+          <h1 className="font-serif text-lg sm:text-xl text-primary">PDV</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground text-xs sm:text-sm hidden sm:inline">
+            {user?.name}
           </span>
           <Button
             variant="ghost"
             size="sm"
-            className="text-muted-foreground"
+            className="text-muted-foreground px-2"
             onClick={handleLogout}
             data-testid="button-logout"
           >
-            <LogOut className="h-4 w-4 mr-2" />
-            Sair
+            <LogOut className="h-4 w-4" />
+            <span className="ml-1 hidden sm:inline">Sair</span>
           </Button>
         </div>
       </header>
 
-      <main className="flex-1 flex">
-        <div className="flex-1 p-4 flex flex-col">
-          <div className="flex flex-wrap gap-4 mb-4">
-            <div className="relative flex-1 min-w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+      <div className="flex flex-1 overflow-hidden">
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <div className="p-2 sm:p-3 space-y-2 sm:space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar produto..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-secondary border-primary/30"
+                className="pl-9 bg-secondary border-primary/30 text-sm"
                 data-testid="input-search-product"
               />
             </div>
-          </div>
 
-          <div className="relative mb-4">
-            <div 
-              className="flex gap-2 overflow-x-auto pb-2"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
+            <div className="relative flex items-center gap-1">
               <Button
-                variant={selectedCategory === null ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedCategory(null)}
-                className="flex-shrink-0"
-                data-testid="button-category-all"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 flex-shrink-0"
+                onClick={() => scrollCategories('left')}
+                data-testid="button-scroll-left"
               >
-                Todos
+                <ChevronLeft className="h-4 w-4" />
               </Button>
-              {categories.map((cat) => (
+              
+              <div 
+                ref={categoryScrollRef}
+                className="flex gap-1.5 overflow-x-auto flex-1 scroll-smooth"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
                 <Button
-                  key={cat.id}
-                  variant={selectedCategory === cat.id ? 'default' : 'outline'}
+                  variant={selectedCategory === null ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className="flex-shrink-0 whitespace-nowrap"
-                  data-testid={`button-category-${cat.id}`}
+                  onClick={() => setSelectedCategory(null)}
+                  className="flex-shrink-0 text-xs px-3"
+                  data-testid="button-category-all"
                 >
-                  {cat.name}
+                  Todos
                 </Button>
-              ))}
+                {categories.map((cat) => (
+                  <Button
+                    key={cat.id}
+                    variant={selectedCategory === cat.id ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className="flex-shrink-0 whitespace-nowrap text-xs px-3"
+                    data-testid={`button-category-${cat.id}`}
+                  >
+                    {cat.name}
+                  </Button>
+                ))}
+              </div>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 flex-shrink-0"
+                onClick={() => scrollCategories('right')}
+                data-testid="button-scroll-right"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           </div>
 
-          <div className="flex-1 overflow-auto">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          <div className="flex-1 overflow-auto p-2 sm:p-3 pt-0">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
               {filteredProducts.map((product) => (
                 <Card
                   key={product.id}
-                  className="cursor-pointer hover-elevate"
+                  className="cursor-pointer hover-elevate active-elevate-2"
                   onClick={() => addToCart(product)}
                   data-testid={`card-product-${product.id}`}
                 >
-                  <CardContent className="p-4">
-                    <h3 className="font-medium text-sm mb-1 line-clamp-2">{product.name}</h3>
-                    <p className="text-primary font-bold">{formatCurrency(product.salePrice)}</p>
-                    <Badge variant="secondary" className="mt-2 text-xs">
-                      Estoque: {product.stock}
+                  <CardContent className="p-2 sm:p-3">
+                    <h3 className="font-medium text-xs sm:text-sm mb-1 line-clamp-2 min-h-[2rem]">{product.name}</h3>
+                    <p className="text-primary font-bold text-sm sm:text-base">{formatCurrency(product.salePrice)}</p>
+                    <Badge variant="secondary" className="mt-1 text-xs">
+                      {product.stock}
                     </Badge>
                   </CardContent>
                 </Card>
               ))}
             </div>
           </div>
-        </div>
+        </main>
 
-        <div className="w-96 bg-card border-l border-border flex flex-col">
-          <div className="p-4 border-b border-border">
-            <div className="flex items-center gap-2">
-              <User className="h-5 w-5 text-muted-foreground" />
-              <Input
-                placeholder="Nome do cliente (opcional)"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                className="bg-secondary border-primary/30"
-                data-testid="input-customer-name"
-              />
-            </div>
-          </div>
+        <aside className="hidden lg:flex w-80 xl:w-96 bg-card border-l border-border flex-col">
+          <CartContent />
+        </aside>
+      </div>
 
-          <div className="flex-1 overflow-auto p-4">
-            {cart.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-muted-foreground text-center">
-                <div>
-                  <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Carrinho vazio</p>
-                  <p className="text-sm">Clique em um produto para adicionar</p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {cart.map((item) => (
-                  <div key={item.product.id} className="bg-secondary rounded-lg p-3" data-testid={`cart-item-${item.product.id}`}>
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="font-medium text-sm flex-1">{item.product.name}</span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => removeFromCart(item.product.id)}
-                        data-testid={`button-remove-${item.product.id}`}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => updateQuantity(item.product.id, -1)}
-                          data-testid={`button-decrease-${item.product.id}`}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="font-medium w-8 text-center">{item.quantity}</span>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => updateQuantity(item.product.id, 1)}
-                          data-testid={`button-increase-${item.product.id}`}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <span className="font-bold text-primary">
-                        {formatCurrency(Number(item.product.salePrice) * item.quantity)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="p-4 border-t border-border space-y-4">
-            <div>
-              <Label htmlFor="notes">Observacoes</Label>
-              <Input
-                id="notes"
-                placeholder="Observacoes do pedido..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="bg-secondary border-primary/30"
-                data-testid="input-notes"
-              />
-            </div>
-
-            <div className="flex justify-between text-lg">
-              <span>Subtotal:</span>
-              <span className="font-bold">{formatCurrency(subtotal)}</span>
-            </div>
-
-            <div>
-              <Label htmlFor="discount">Desconto (R$)</Label>
-              <Input
-                id="discount"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0,00"
-                value={manualDiscount}
-                onChange={(e) => setManualDiscount(e.target.value)}
-                className="bg-secondary border-primary/30"
-                data-testid="input-discount"
-              />
-            </div>
-
-            {discountValue > 0 && (
-              <div className="flex justify-between text-green-400">
-                <span>Desconto:</span>
-                <span>-{formatCurrency(discountValue)}</span>
-              </div>
-            )}
-
-            <div className="flex justify-between text-xl font-bold text-primary">
-              <span>Total:</span>
-              <span>{formatCurrency(total)}</span>
-            </div>
-
-            <Button
-              className="w-full py-6 text-lg"
-              disabled={cart.length === 0}
-              onClick={handleFinalizeSale}
-              data-testid="button-finalize-sale"
+      <div className="lg:hidden fixed bottom-4 right-4 z-40">
+        <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
+          <SheetTrigger asChild>
+            <Button 
+              size="lg" 
+              className="h-14 w-14 rounded-full shadow-lg relative"
+              data-testid="button-open-cart"
             >
-              <Check className="h-5 w-5 mr-2" />
-              Finalizar Venda
+              <ShoppingCart className="h-6 w-6" />
+              {cartItemCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  {cartItemCount}
+                </span>
+              )}
             </Button>
-          </div>
-        </div>
-      </main>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-[85vw] sm:w-[380px] p-0">
+            <SheetHeader className="p-3 border-b">
+              <SheetTitle className="flex items-center gap-2">
+                <ShoppingCart className="h-5 w-5" />
+                Carrinho ({cartItemCount})
+              </SheetTitle>
+            </SheetHeader>
+            <div className="h-[calc(100vh-4rem)]">
+              <CartContent />
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
 
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-sm sm:max-w-md mx-2">
           <DialogHeader>
-            <DialogTitle className="text-2xl">Pagamento</DialogTitle>
+            <DialogTitle className="text-xl sm:text-2xl">Pagamento</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-6">
-            <div className="text-center py-4 bg-secondary rounded-lg">
-              <p className="text-muted-foreground text-sm">Total a Pagar</p>
-              <p className="text-4xl font-bold text-primary">{formatCurrency(total)}</p>
+          <div className="space-y-4">
+            <div className="text-center py-3 bg-secondary rounded-lg">
+              <p className="text-muted-foreground text-xs sm:text-sm">Total a Pagar</p>
+              <p className="text-3xl sm:text-4xl font-bold text-primary">{formatCurrency(total)}</p>
             </div>
 
             <div>
-              <Label className="mb-3 block">Forma de Pagamento</Label>
-              <div className="grid grid-cols-2 gap-3">
+              <Label className="mb-2 block text-sm">Forma de Pagamento</Label>
+              <div className="grid grid-cols-2 gap-2">
                 {paymentMethods.map((method) => (
                   <Button
                     key={method.id}
                     variant={paymentMethod === method.id ? 'default' : 'outline'}
-                    className="h-16 flex-col gap-1"
+                    className="h-14 sm:h-16 flex-col gap-1"
                     onClick={() => setPaymentMethod(method.id)}
                     data-testid={`button-payment-${method.id}`}
                   >
-                    <method.icon className="h-5 w-5" />
+                    <method.icon className="h-4 w-4 sm:h-5 sm:w-5" />
                     <span className="text-xs">{method.label}</span>
                   </Button>
                 ))}
@@ -433,7 +503,7 @@ export default function PDV() {
 
             {paymentMethod === 'cash' && (
               <div>
-                <Label htmlFor="changeFor">Troco para</Label>
+                <Label htmlFor="changeFor" className="text-sm">Troco para</Label>
                 <Input
                   id="changeFor"
                   type="number"
@@ -441,11 +511,11 @@ export default function PDV() {
                   placeholder="0,00"
                   value={changeFor}
                   onChange={(e) => setChangeFor(e.target.value)}
-                  className="bg-secondary border-primary/30 text-lg"
+                  className="bg-secondary border-primary/30 text-base"
                   data-testid="input-change-for"
                 />
                 {change > 0 && (
-                  <p className="text-green-500 mt-2 text-lg font-semibold">
+                  <p className="text-green-500 mt-2 text-base font-semibold">
                     Troco: {formatCurrency(change)}
                   </p>
                 )}
@@ -453,7 +523,7 @@ export default function PDV() {
             )}
 
             <Button
-              className="w-full py-6 text-lg"
+              className="w-full py-5 text-base"
               disabled={!paymentMethod || createOrderMutation.isPending}
               onClick={handleConfirmPayment}
               data-testid="button-confirm-payment"

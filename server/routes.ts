@@ -792,6 +792,27 @@ export async function registerRoutes(
       case "delivered":
         updates.deliveredAt = now;
         break;
+      case "cancelled":
+        // Restore stock for cancelled orders
+        const orderItems = await storage.getOrderItems(req.params.id);
+        for (const item of orderItems) {
+          const product = await storage.getProduct(item.productId);
+          if (product) {
+            const previousStock = product.stock;
+            const newStock = previousStock + item.quantity;
+            await storage.updateProduct(item.productId, { stock: newStock });
+            
+            // Log the stock restoration
+            await storage.createStockLog({
+              productId: item.productId,
+              previousStock,
+              newStock,
+              change: item.quantity,
+              reason: `Cancelamento pedido #${req.params.id.slice(0, 8)}`,
+            });
+          }
+        }
+        break;
     }
 
     const updated = await storage.updateOrder(req.params.id, updates);
