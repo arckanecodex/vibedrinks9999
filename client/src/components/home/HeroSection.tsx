@@ -92,24 +92,27 @@ export function HeroSection() {
           </motion.div>
 
           <motion.div 
-            className="flex items-center justify-center gap-8 pt-8"
+            className="flex flex-col items-center gap-4 pt-8"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8, duration: 0.6 }}
           >
-            <div className="flex items-center gap-2 text-white/70">
-              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                <Truck className="h-5 w-5 text-primary" />
+            <div className="flex items-center justify-center gap-8 flex-wrap">
+              <div className="flex items-center gap-2 text-white/70">
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                  <Clock className="h-5 w-5 text-primary" />
+                </div>
+                <span className="text-sm">14h as 06h</span>
               </div>
-              <span className="text-sm">Entrega Rapida</span>
-            </div>
-            <div className="w-px h-8 bg-white/20" />
-            <div className="flex items-center gap-2 text-white/70">
-              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                <Clock className="h-5 w-5 text-primary" />
+              <div className="w-px h-8 bg-white/20" />
+              <div className="flex items-center gap-2 text-white/70">
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                  <Truck className="h-5 w-5 text-primary" />
+                </div>
+                <span className="text-sm">Entrega Propria</span>
               </div>
-              <span className="text-sm">Ate 23h</span>
             </div>
+            <p className="text-sm text-white/50">Todos os dias</p>
           </motion.div>
         </motion.div>
 
