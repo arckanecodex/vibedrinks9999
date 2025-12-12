@@ -83,7 +83,7 @@ export function HeroSection() {
                 Ver Cardapio
                 <ChevronDown className="h-5 w-5 group-hover:translate-y-1 transition-transform" />
               </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full" />
             </Button>
             
             <Button
